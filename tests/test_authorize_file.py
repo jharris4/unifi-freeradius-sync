@@ -114,15 +114,20 @@ async def test_client_with_an_alias_but_no_vlan_is_commented_out(generate):
     )
 
 
-async def test_vlan2_with_an_ssid_emits_the_ssid_entry_first(generate):
+async def test_alt_vlan_with_an_ssid_emits_the_ssid_entry_first(generate):
     # FreeRADIUS `files` takes the first match, so the SSID-qualified entry has
     # to precede the unqualified one or it would never be reached
     output = await generate(
         clients=[
-            client("aa:bb:cc:dd:ee:03", note="vlan=20 vlan2=30", name="Phone", last_ip="10.0.20.7")
+            client(
+                "aa:bb:cc:dd:ee:03",
+                note="vlan=20 alt_vlan=30",
+                name="Phone",
+                last_ip="10.0.20.7",
+            )
         ],
         networks=[vlan_network(20), vlan_network(30)],
-        vlan_2_ssid="GuestNet",
+        alt_ssid="GuestNet",
     )
     assert output == header() + (
         "# Phone\n"
@@ -139,10 +144,15 @@ async def test_vlan2_with_an_ssid_emits_the_ssid_entry_first(generate):
     )
 
 
-async def test_vlan2_without_an_ssid_emits_only_the_plain_entry(generate):
+async def test_alt_vlan_without_an_ssid_emits_only_the_plain_entry(generate):
     output = await generate(
         clients=[
-            client("aa:bb:cc:dd:ee:03", note="vlan=20 vlan2=30", name="Phone", last_ip="10.0.20.7")
+            client(
+                "aa:bb:cc:dd:ee:03",
+                note="vlan=20 alt_vlan=30",
+                name="Phone",
+                last_ip="10.0.20.7",
+            )
         ],
         networks=[vlan_network(20), vlan_network(30)],
     )
@@ -156,12 +166,12 @@ async def test_vlan2_without_an_ssid_emits_only_the_plain_entry(generate):
     assert "Called-Station-Id" not in output
 
 
-async def test_vlan2_is_ignored_when_the_ssid_is_unset_even_for_blocked_clients(generate):
-    # an undefined vlan2 still blocks the client, ssid or not
+async def test_alt_vlan_is_ignored_when_the_ssid_is_unset_even_for_blocked_clients(generate):
+    # an undefined alt_vlan still blocks the client, ssid or not
     output = await generate(
-        clients=[client("aa:bb:cc:dd:ee:03", note="vlan=20 vlan2=99", name="Phone")],
+        clients=[client("aa:bb:cc:dd:ee:03", note="vlan=20 alt_vlan=99", name="Phone")],
         networks=[vlan_network(20)],
-        vlan_2_ssid="GuestNet",
+        alt_ssid="GuestNet",
     )
     assert output == header() + (
         "# Phone\n"
@@ -218,7 +228,7 @@ async def test_shuffled_input_produces_identical_bytes(generate):
 
 async def test_full_file_with_a_mixed_client_set(generate):
     output = await generate(
-        clients=SHUFFLE_SAMPLE, networks=SHUFFLE_NETWORKS, vlan_2_ssid="GuestNet"
+        clients=SHUFFLE_SAMPLE, networks=SHUFFLE_NETWORKS, alt_ssid="GuestNet"
     )
     assert output == header() + (
         # apple, sorted ahead of "Banana" case-insensitively, MAC breaking the

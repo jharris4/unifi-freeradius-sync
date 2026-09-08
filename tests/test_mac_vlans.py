@@ -33,14 +33,42 @@ async def test_both_note_syntaxes_parse(note):
     assert record.blocked is False
 
 
-@pytest.mark.parametrize("note", ["vlan 20", "vlan20", "vlan-20", "vlan", "vlan=", "VLAN=20"])
-async def test_notes_without_a_separator_do_not_set_a_vlan(note):
-    # the regex requires an explicit [=:] -- a bare "vlan 20" used to match and
-    # silently assign a VLAN. It is also case sensitive, so "VLAN=20" is inert.
+@pytest.mark.parametrize(
+    "note",
+    [
+        "vlan 20",
+        "vlan20",
+        "vlan-20",
+        "vlan",
+        "vlan=",
+        "VLAN=20",
+        # notes are free text, so "vlan" turning up as the tail of another word
+        # must not count -- the word boundary is what stops these
+        "myvlan=99",
+        "alt_vlan=30",
+        "old_vlan: 5",
+    ],
+)
+async def test_notes_that_do_not_carry_a_vlan_directive(note):
+    # the regex requires an explicit [=:] and a word boundary before "vlan".
+    # It is also case sensitive, so "VLAN=20" is inert.
     records_out = await records(
         [client("aa:bb:cc:dd:ee:01", note=note, name="Thing")], [vlan_network(20)]
     )
     assert [r.vlan for r in records_out] == [0]
+
+
+@pytest.mark.parametrize("note", ["no-vlan=7", "iot-vlan: 20", "the vlan=20"])
+async def test_a_non_word_character_before_vlan_still_counts(note):
+    # \b only rejects letters, digits and underscores, so a hyphen or a space
+    # still reads as a directive. That keeps "iot-vlan=20" working, at the cost
+    # of "no-vlan=7" also being taken literally -- worth knowing, not a bug to
+    # fix by tightening further and silently ignoring notes people do write.
+    [record] = await records(
+        [client("aa:bb:cc:dd:ee:01", note=note)], [vlan_network(7), vlan_network(20)]
+    )
+    assert record.vlan in (7, 20)
+    assert record.blocked is False
 
 
 async def test_first_match_in_the_note_wins():
@@ -51,23 +79,24 @@ async def test_first_match_in_the_note_wins():
     assert record.vlan == 20
 
 
-async def test_vlan2_does_not_satisfy_the_vlan_regex():
-    # "vlan2=30" has no [=:] straight after "vlan", so a note carrying only a
-    # secondary VLAN leaves the primary unset and the client gets commented out
+async def test_alt_vlan_does_not_satisfy_the_primary_regex():
+    # the word boundary keeps "alt_vlan=30" from matching as "vlan=30", so a
+    # note carrying only an alt VLAN leaves the primary unset and gets
+    # commented out. Without \b this silently assigned the alt VLAN as primary.
     [record] = await records(
-        [client("aa:bb:cc:dd:ee:01", note="vlan2=30", name="Phone")],
+        [client("aa:bb:cc:dd:ee:01", note="alt_vlan=30", name="Phone")],
         [vlan_network(30)],
     )
-    assert (record.vlan, record.vlan_2) == (0, 30)
+    assert (record.vlan, record.alt_vlan) == (0, 30)
 
 
-async def test_vlan2_is_parsed_alongside_vlan_in_either_order():
-    for note in ("vlan=20 vlan2=30", "vlan2=30 vlan=20"):
+async def test_alt_vlan_is_parsed_alongside_vlan_in_either_order():
+    for note in ("vlan=20 alt_vlan=30", "alt_vlan=30 vlan=20"):
         [record] = await records(
             [client("aa:bb:cc:dd:ee:01", note=note)],
             [vlan_network(20), vlan_network(30)],
         )
-        assert (record.vlan, record.vlan_2) == (20, 30)
+        assert (record.vlan, record.alt_vlan) == (20, 30)
 
 
 # --- which VLANs count as defined ----------------------------------------
@@ -104,11 +133,11 @@ async def test_networks_without_a_vlan_tag_are_ignored():
     assert (undefined.vlan, undefined.blocked) == (0, True)
 
 
-async def test_undefined_vlan2_blocks_the_whole_client():
+async def test_undefined_alt_vlan_blocks_the_whole_client():
     [record] = await records(
-        [client("aa:bb:cc:dd:ee:01", note="vlan=20 vlan2=99")], [vlan_network(20)]
+        [client("aa:bb:cc:dd:ee:01", note="vlan=20 alt_vlan=99")], [vlan_network(20)]
     )
-    assert (record.vlan, record.vlan_2, record.blocked) == (20, 99, True)
+    assert (record.vlan, record.alt_vlan, record.blocked) == (20, 99, True)
 
 
 # --- which clients get a record ------------------------------------------

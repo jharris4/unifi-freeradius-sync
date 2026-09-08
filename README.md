@@ -49,12 +49,20 @@ A VLAN referenced in a note but not defined on the controller is treated as a
 mistake: that client is written out commented, rather than being given a VLAN
 that does not exist.
 
-### Second VLAN per SSID
+### A different VLAN on one SSID
 
-If `vlan_2_ssid` is set, a `vlan2=30` directive in the note emits an
-additional entry matched on `Called-Station-Id`, so the device gets a
-different VLAN when it connects to that specific SSID. Leave `vlan_2_ssid`
-empty to disable. Only one such SSID is supported.
+Set `alt_ssid` to an SSID name, and an `alt_vlan=30` directive in a client's
+note emits an extra entry matched on `Called-Station-Id`. That device then
+gets VLAN 30 when it connects to that SSID, and its normal `vlan=` VLAN
+everywhere else.
+
+The case this exists for: a phone that normally sits on the trusted LAN, but
+should land on the untrusted IoT VLAN while it is joined to the IoT SSID —
+so it can reach hubs and devices there during commissioning. Note that the
+alt VLAN is not necessarily the *more* privileged one; it is just the other
+one.
+
+Leave `alt_ssid` empty to disable. Only one such SSID is supported.
 
 ## What this does not do
 
@@ -97,9 +105,14 @@ you signal FreeRADIUS to reload.
 
 See `config.example.json`. `host`, `username`, `password` are required.
 
-`vlan_regex` / `vlan_2_regex` control the note syntax; the `*_match_index`
-values select which capture group holds the number. `default_vlan` is the
-catch-all VLAN described above — read that section.
+`vlan_regex` / `alt_vlan_regex` control the note syntax; the `*_match_index`
+values select which capture group holds the number. Both patterns begin with
+`\b` so that `vlan` at the end of another word — `alt_vlan`, `myvlan` — is not
+read as a directive. `default_vlan` is the catch-all VLAN described above —
+read that section.
+
+Keys this version does not recognise are ignored, but logged at startup, so a
+misspelled or renamed optional key does not fail silently.
 
 TLS verification against the controller is currently disabled unconditionally,
 because UniFi controllers ship self-signed certificates.

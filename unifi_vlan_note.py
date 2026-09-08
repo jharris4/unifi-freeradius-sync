@@ -34,11 +34,11 @@ DEBOUNCE_SECONDS = 5
 RECONNECT_MIN_SECONDS = 5
 RECONNECT_MAX_SECONDS = 300
 
-VLAN_REGEX = r"(vlan)(\s*)([=:])(\s*)([0-9]+)"
+VLAN_REGEX = r"\b(vlan)(\s*)([=:])(\s*)([0-9]+)"
 VLAN_REGEX_MATCH_INDEX = 5 # whole match is at index 0, so index is 1 based...
-VLAN_2_REGEX = r"(vlan2)(\s*)([=:])(\s*)([0-9]+)"
-VLAN_2_REGEX_MATCH_INDEX = 5 # whole match is at index 0, so index is 1 based...
-VLAN_2_SSID = ""
+ALT_VLAN_REGEX = r"\b(alt_vlan)(\s*)([=:])(\s*)([0-9]+)"
+ALT_VLAN_REGEX_MATCH_INDEX = 5 # whole match is at index 0, so index is 1 based...
+ALT_SSID = ""
 
 def toMACUppercase(mac: str):
     return re.sub('[:]', '', mac).upper()
@@ -46,17 +46,17 @@ def toMACUppercase(mac: str):
 class MACVLANRecord:
     mac: str
     vlan: int
-    vlan_2: int
+    alt_vlan: int
     alias: str
     ip: str
     wired: bool
     blocked: bool
 
-    def __init__(self, mac: str, vlan: int, vlan_2: int, alias: str, ip: str,
+    def __init__(self, mac: str, vlan: int, alt_vlan: int, alias: str, ip: str,
                  wired: bool, blocked: bool):
         self.mac = mac
         self.vlan = vlan
-        self.vlan_2 = vlan_2
+        self.alt_vlan = alt_vlan
         self.alias = alias
         self.ip = ip
         self.wired = wired
@@ -70,9 +70,9 @@ class UnifiVLANNoteConfig:
     site: str = "default"
     vlan_regex: str = VLAN_REGEX
     vlan_regex_match_index: int = VLAN_REGEX_MATCH_INDEX
-    vlan_2_regex: str = VLAN_2_REGEX
-    vlan_2_regex_match_index: int = VLAN_2_REGEX_MATCH_INDEX
-    vlan_2_ssid : str = VLAN_2_SSID
+    alt_vlan_regex: str = ALT_VLAN_REGEX
+    alt_vlan_regex_match_index: int = ALT_VLAN_REGEX_MATCH_INDEX
+    alt_ssid: str = ALT_SSID
     default_vlan: int = 1
 
     def __init__(self, host: str, username: str, password: str):
@@ -80,29 +80,37 @@ class UnifiVLANNoteConfig:
         self.username = username
         self.password = password
 
+    OPTIONAL_KEYS = (
+        "port",
+        "site",
+        "vlan_regex",
+        "vlan_regex_match_index",
+        "alt_vlan_regex",
+        "alt_vlan_regex_match_index",
+        "alt_ssid",
+        "default_vlan",
+    )
+
     def loadFromFile(config_path: str):
         c = json.loads(Path(config_path).read_text())
-        missing = [key for key in ("host", "username", "password") if key not in c]
+        required = ("host", "username", "password")
+        missing = [key for key in required if key not in c]
         if missing:
             LOGGER.error(f"Config {config_path} is missing required keys: {', '.join(missing)}")
         else:
+            # every optional key has a working default, so a misspelled or
+            # renamed one would otherwise be ignored in silence
+            known = set(required) | set(UnifiVLANNoteConfig.OPTIONAL_KEYS)
+            unknown = [key for key in c if key not in known]
+            if unknown:
+                LOGGER.warning(
+                    f"Config {config_path} has keys this version does not use, "
+                    f"and they are being ignored: {', '.join(sorted(unknown))}"
+                )
             config = UnifiVLANNoteConfig(c["host"], c["username"], c["password"])
-            if ("port" in c):
-                config.port = c["port"]
-            if ("site" in c):
-                config.site = c["site"]
-            if ("vlan_regex" in c):
-                config.vlan_regex = c["vlan_regex"]
-            if ("vlan_regex_match_index" in c):
-                config.vlan_regex_match_index = c["vlan_regex_match_index"]
-            if ("vlan_2_regex" in c):
-                config.vlan_2_regex = c["vlan_2_regex"]
-            if ("vlan_2_regex_match_index" in c):
-                config.vlan_2_regex_match_index = c["vlan_2_regex_match_index"]
-            if ("vlan_2_ssid" in c):
-                config.vlan_2_ssid = c["vlan_2_ssid"]
-            if ("default_vlan" in c):
-                config.default_vlan = c["default_vlan"]
+            for key in UnifiVLANNoteConfig.OPTIONAL_KEYS:
+                if key in c:
+                    setattr(config, key, c[key])
             return config
 
 class UnifiVLANNoteController:
@@ -182,7 +190,7 @@ class UnifiVLANNoteController:
             ip = client.get("last_ip") or client.get("fixed_ip") or ""
             wired = bool(client.get("is_wired"))
             vlan = 0
-            vlan_2 = 0
+            alt_vlan = 0
             blocked = False
             matches = re.search(self.config.vlan_regex, note)
             if (matches):
@@ -190,19 +198,19 @@ class UnifiVLANNoteController:
                 blocked = vlan not in vlan_set
                 if blocked:
                     blocked_vlans.add(vlan)
-            matches = re.search(self.config.vlan_2_regex, note)
+            matches = re.search(self.config.alt_vlan_regex, note)
             if (matches):
-                vlan_2 = int(matches[self.config.vlan_2_regex_match_index])
-                if vlan_2 not in vlan_set:
+                alt_vlan = int(matches[self.config.alt_vlan_regex_match_index])
+                if alt_vlan not in vlan_set:
                     blocked = True
-                    blocked_vlans.add(vlan_2)
+                    blocked_vlans.add(alt_vlan)
             if (mac and vlan) or alias:
                 # print("client:\n\n")
                 # print(alias)
                 # print("\n\n")
                 # print(client)
                 # print("\n\n")
-                mac_vlans.append(MACVLANRecord(mac, vlan, vlan_2, alias, ip, wired, blocked))
+                mac_vlans.append(MACVLANRecord(mac, vlan, alt_vlan, alias, ip, wired, blocked))
 
         if len(blocked_vlans) > 0:
             print("blocked vlans:")
@@ -233,14 +241,14 @@ class UnifiVLANNoteController:
                         # {toMACUppercase(mac_vlan.mac)}
                         #   Tunnel-Private-Group-ID := "{mac_vlan.vlan}"'''))
                 else:
-                    if mac_vlan.vlan_2 and len(self.config.vlan_2_ssid) > 0:
-                        ssid_match = f"Called-Station-Id =~ '.*:{self.config.vlan_2_ssid}'"
+                    if mac_vlan.alt_vlan and len(self.config.alt_ssid) > 0:
+                        ssid_match = f"Called-Station-Id =~ '.*:{self.config.alt_ssid}'"
                         f.write(textwrap.dedent(f'''\
                             # {mac_vlan.alias}{" [WIRED]" if mac_vlan.wired else ""}
                             # {mac_vlan.ip}
-                            # SSID: {self.config.vlan_2_ssid}
+                            # SSID: {self.config.alt_ssid}
                             {toMACUppercase(mac_vlan.mac)} {ssid_match}
-                               Tunnel-Private-Group-ID := "{mac_vlan.vlan_2}"'''))
+                               Tunnel-Private-Group-ID := "{mac_vlan.alt_vlan}"'''))
                         f.write("\n\n")
 
                     f.write(textwrap.dedent(f'''\
