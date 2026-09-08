@@ -1,0 +1,14 @@
+{
+    "host": "192.168.1.1",
+    "port": 8443,
+    "site": "default",
+    "username": "REPLACE_ME",
+    "password": "REPLACE_ME",
+    "default_vlan": 1,
+    "vlan_regex": "(vlan)(\\s*)([=:])(\\s*)([0-9]+)",
+    "vlan_regex_match_index": 5,
+    "vlan_2_regex": "(vlan2)(\\s*)([=:])(\\s*)([0-9]+)",
+    "vlan_2_regex_match_index": 5,
+    "vlan_2_ssid": "",
+    "client_secret": "UNUSED_SEE_README"
+}
