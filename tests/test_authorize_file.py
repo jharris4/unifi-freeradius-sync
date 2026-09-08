@@ -8,7 +8,7 @@ intent before touching the expected text.
 import itertools
 
 import pytest
-from conftest import client, header, make_controller, vlan_network
+from conftest import REJECT_TRAILER, client, header, make_controller, vlan_network
 
 
 async def test_file_lands_at_the_path_freeradius_expects(tmp_path):
@@ -264,3 +264,101 @@ async def test_regeneration_overwrites_rather_than_appends(tmp_path):
     first = (tmp_path / "mods-config" / "files" / "authorize").read_text()
     await controller.generateUsersConfig(str(tmp_path))
     assert (tmp_path / "mods-config" / "files" / "authorize").read_text() == first
+
+
+# --- reject_unknown ------------------------------------------------------
+
+
+async def test_reject_unknown_is_off_by_default(generate):
+    assert await generate() == header()
+
+
+async def test_reject_unknown_replaces_the_preamble_with_a_final_deny(generate):
+    output = await generate(
+        clients=[client("aa:bb:cc:dd:ee:01", note="vlan=20", name="Laptop", last_ip="10.0.20.5")],
+        networks=[vlan_network(20)],
+        reject_unknown=True,
+    )
+    assert output == (
+        "# Laptop\n"
+        "# 10.0.20.5\n"
+        "AABBCCDDEE01\n"
+        '   Tunnel-Private-Group-ID := "20"\n'
+        "\n"
+    ) + REJECT_TRAILER
+    assert "Auth-Type := Accept" not in output
+    assert "Fall-Through" not in output
+
+
+async def test_the_deny_comes_last_so_listed_macs_match_first(generate):
+    # the files module takes the first match, so a trailing DEFAULT is only
+    # reached once every MAC entry above has failed to match
+    output = await generate(
+        clients=[client("aa:bb:cc:dd:ee:01", note="vlan=20", name="Laptop")],
+        networks=[vlan_network(20)],
+        reject_unknown=True,
+    )
+    assert output.index("AABBCCDDEE01") < output.index("Auth-Type := Reject")
+    assert output.endswith(REJECT_TRAILER)
+
+
+async def test_default_vlan_is_irrelevant_when_rejecting(generate):
+    # nothing is handed a catch-all VLAN any more, so the key has no effect
+    assert await generate(reject_unknown=True, default_vlan=42) == REJECT_TRAILER
+
+
+async def test_no_clients_generates_a_deny_everything_file(generate):
+    # worth stating plainly: a sync that returns nothing locks every device
+    # out, which is why sync.sh refuses to deploy MAC-less output
+    assert await generate(reject_unknown=True) == REJECT_TRAILER
+
+
+async def test_commented_clients_are_denied_rather_than_given_default_vlan(generate):
+    # the behaviour change that comes with the mode: a note naming a VLAN the
+    # controller does not have lands on default_vlan when failing open, and is
+    # refused outright when failing closed
+    clients = [client("aa:bb:cc:dd:ee:02", note="vlan=99", name="Rogue", last_ip="10.0.0.9")]
+    commented = (
+        "# Rogue\n"
+        "# 10.0.0.9\n"
+        "# AABBCCDDEE02\n"
+        '#   Tunnel-Private-Group-ID := "99"\n'
+        "\n"
+    )
+    assert await generate(clients=clients, networks=[vlan_network(20)]) == header() + commented
+    assert (
+        await generate(clients=clients, networks=[vlan_network(20)], reject_unknown=True)
+        == commented + REJECT_TRAILER
+    )
+
+
+async def test_alt_ssid_entries_are_unaffected_by_the_mode(generate):
+    clients = [
+        client(
+            "aa:bb:cc:dd:ee:03",
+            note="vlan=41,alt_vlan=31",
+            name="Phone",
+            last_ip="10.0.41.7",
+        )
+    ]
+    entries = (
+        "# Phone\n"
+        "# 10.0.41.7\n"
+        "# SSID: IoT\n"
+        "AABBCCDDEE03 Called-Station-Id =~ '.*:IoT'\n"
+        '   Tunnel-Private-Group-ID := "31"\n'
+        "\n"
+        "# Phone\n"
+        "# 10.0.41.7\n"
+        "AABBCCDDEE03\n"
+        '   Tunnel-Private-Group-ID := "41"\n'
+        "\n"
+    )
+    networks = [vlan_network(41), vlan_network(31)]
+    assert await generate(clients=clients, networks=networks, alt_ssid="IoT") == header() + entries
+    assert (
+        await generate(
+            clients=clients, networks=networks, alt_ssid="IoT", reject_unknown=True
+        )
+        == entries + REJECT_TRAILER
+    )

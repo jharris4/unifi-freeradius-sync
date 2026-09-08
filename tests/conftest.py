@@ -93,3 +93,7 @@ def header(default_vlan=1):
         "   Fall-Through = Yes\n"
         "\n"
     )
+
+
+REJECT_TRAILER = "DEFAULT Auth-Type := Reject\n"
+"""The whole of the fail-closed mode: no preamble, and a final deny."""

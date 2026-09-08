@@ -74,6 +74,7 @@ class UnifiVLANNoteConfig:
     alt_vlan_regex_match_index: int = ALT_VLAN_REGEX_MATCH_INDEX
     alt_ssid: str = ALT_SSID
     default_vlan: int = 1
+    reject_unknown: bool = False
 
     def __init__(self, host: str, username: str, password: str):
         self.host = host
@@ -89,6 +90,7 @@ class UnifiVLANNoteConfig:
         "alt_vlan_regex_match_index",
         "alt_ssid",
         "default_vlan",
+        "reject_unknown",
     )
 
     def loadFromFile(config_path: str):
@@ -225,13 +227,16 @@ class UnifiVLANNoteController:
         # write errors propagate: watch mode retries them, one-shot mode must
         # exit non-zero rather than report success over a stale file
         with open(os.path.join(output_path, 'mods-config/files/authorize'), 'w') as f:
-            f.write(textwrap.dedent(f''' \
-                DEFAULT Auth-Type := Accept
-                    Tunnel-Type = VLAN,
-                    Tunnel-Medium-Type = IEEE-802,
-                    Tunnel-Private-Group-Id = "{self.config.default_vlan}",
-                    Fall-Through = Yes'''))
-            f.write("\n\n")
+            # fail-open: an unlisted MAC matches this first entry, is given the
+            # default VLAN, and falls through in case a later entry names it
+            if not self.config.reject_unknown:
+                f.write(textwrap.dedent(f''' \
+                    DEFAULT Auth-Type := Accept
+                        Tunnel-Type = VLAN,
+                        Tunnel-Medium-Type = IEEE-802,
+                        Tunnel-Private-Group-Id = "{self.config.default_vlan}",
+                        Fall-Through = Yes'''))
+                f.write("\n\n")
 
             for mac_vlan in await self.getMACVLANs():
                 if mac_vlan.blocked or not mac_vlan.mac or not mac_vlan.vlan:
@@ -258,6 +263,11 @@ class UnifiVLANNoteController:
                            Tunnel-Private-Group-ID := "{mac_vlan.vlan}"'''))
 
                 f.write("\n\n")
+
+            # fail-closed: reached only when nothing above matched, so the MAC
+            # is unknown and is denied rather than handed default_vlan
+            if self.config.reject_unknown:
+                f.write("DEFAULT Auth-Type := Reject\n")
 
     async def generateConfig(self, output_path: str):
         await self.generateUsersConfig(output_path)

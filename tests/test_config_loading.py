@@ -98,3 +98,13 @@ def test_optional_keys_override_the_defaults(tmp_path):
 def test_the_shipped_example_config_validates():
     config = UnifiVLANNoteConfig.loadFromFile(str(REPO_ROOT / "config.example.json"))
     assert config is not None
+
+
+def test_reject_unknown_defaults_to_off(tmp_path):
+    config = UnifiVLANNoteConfig.loadFromFile(write_config(tmp_path, MINIMAL))
+    assert config.reject_unknown is False
+
+
+def test_reject_unknown_can_be_enabled(tmp_path):
+    data = MINIMAL | {"reject_unknown": True}
+    assert UnifiVLANNoteConfig.loadFromFile(write_config(tmp_path, data)).reject_unknown is True

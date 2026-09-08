@@ -5,6 +5,7 @@
     "username": "REPLACE_ME",
     "password": "REPLACE_ME",
     "default_vlan": 1,
+    "reject_unknown": false,
     "vlan_regex": "\\b(vlan)(\\s*)([=:])(\\s*)([0-9]+)",
     "vlan_regex_match_index": 5,
     "alt_vlan_regex": "\\b(alt_vlan)(\\s*)([=:])(\\s*)([0-9]+)",

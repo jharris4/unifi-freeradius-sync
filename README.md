@@ -16,7 +16,7 @@ but it has had exactly one user, and the cleanup listed under
 
 ## ⚠️ This is fail-open by default
 
-The generated file begins with a catch-all:
+Unless you set `reject_unknown`, the generated file begins with a catch-all:
 
 ```
 DEFAULT Auth-Type := Accept
@@ -27,12 +27,35 @@ DEFAULT Auth-Type := Accept
 ```
 
 **Any MAC address that is not listed is accepted and placed on
-`default_vlan`.** This is not a MAC allowlist. If you set `default_vlan` to
-your trusted LAN, every unknown device that associates lands on your trusted
-LAN.
+`default_vlan`.** In this mode it is not a MAC allowlist. If you set
+`default_vlan` to your trusted LAN, every unknown device that associates lands
+on your trusted LAN. Set `default_vlan` to a guest or quarantine VLAN.
 
-Set `default_vlan` to a guest or quarantine VLAN. An opt-in mode that rejects
-unknown devices instead is a planned change, not current behaviour.
+### `reject_unknown`
+
+Set `reject_unknown: true` and the shape inverts: no catch-all at the top, and
+a final
+
+```
+DEFAULT Auth-Type := Reject
+```
+
+after the MAC entries. Since the `files` module takes the first match, that
+line is reached only when nothing above matched, so an unlisted MAC is denied
+instead of being handed a VLAN. This is the mode to use if you want a MAC
+allowlist.
+
+Two consequences worth knowing before you turn it on:
+
+- A client whose note names a VLAN the controller does not have is written out
+  commented, so under `reject_unknown` it is **denied**, where it would
+  otherwise have landed on `default_vlan`. Same for a client with an alias but
+  no `vlan=` directive.
+- If a sync ever produces an empty file, that file denies everything. `sync.sh`
+  refuses to deploy empty or MAC-less output for exactly this reason; if you
+  are integrating some other way, do the same check.
+
+`default_vlan` has no effect in this mode.
 
 ## How it works
 
