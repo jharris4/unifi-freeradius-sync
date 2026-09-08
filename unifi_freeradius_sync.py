@@ -226,16 +226,16 @@ class SyncController:
                     blocked = True
                     blocked_vlans.add(alt_vlan)
             if (mac and vlan) or alias:
-                # print("client:\n\n")
-                # print(alias)
-                # print("\n\n")
-                # print(client)
-                # print("\n\n")
                 mac_vlans.append(MACVLANRecord(mac, vlan, alt_vlan, alias, ip, wired, blocked))
 
-        if len(blocked_vlans) > 0:
-            print("blocked vlans:")
-            print(blocked_vlans)
+        if blocked_vlans:
+            # a note naming a VLAN the controller does not have is a typo often
+            # enough to be worth saying out loud; those clients are written out
+            # commented rather than given a VLAN that does not exist
+            LOGGER.warning(
+                "Notes reference VLANs not defined on the controller, so those "
+                f"clients are commented out: {', '.join(str(v) for v in sorted(blocked_vlans))}"
+            )
         # the controller does not return clients in a stable order, so sort to
         # keep the generated file deterministic across runs
         mac_vlans.sort(key=lambda r: (r.alias.lower(), r.mac))

@@ -229,3 +229,22 @@ async def test_input_order_does_not_affect_output_order():
     for permutation in itertools.permutations(SORT_SAMPLE):
         out = await records(list(permutation), [])
         assert [(r.alias, r.mac) for r in out] == expected
+
+
+# --- reporting ------------------------------------------------------------
+
+
+async def test_undefined_vlans_are_named_in_a_warning(caplog):
+    clients = [
+        client("aa:bb:cc:dd:ee:01", note="vlan=99", name="Rogue"),
+        client("aa:bb:cc:dd:ee:02", note="vlan=20,alt_vlan=77", name="Phone"),
+    ]
+    await records(clients, [vlan_network(20)])
+    assert "99" in caplog.text
+    assert "77" in caplog.text
+    assert "commented out" in caplog.text
+
+
+async def test_nothing_is_logged_when_every_vlan_is_defined(caplog):
+    await records([client("aa:bb:cc:dd:ee:01", note="vlan=20")], [vlan_network(20)])
+    assert caplog.text == ""
