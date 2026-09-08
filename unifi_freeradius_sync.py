@@ -16,7 +16,7 @@ from aiounifi.models.api import ApiRequest
 from aiounifi.models.configuration import Configuration
 from aiounifi.models.message import MessageKey
 
-DEFAULT_CONFIG_PATH = "./unifi_vlan_note_config.json"
+DEFAULT_CONFIG_PATH = "./config.json"
 DEFAULT_OUTPUT_PATH = "./"
 
 LOGGER = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class MACVLANRecord:
         self.wired = wired
         self.blocked = blocked
 
-class UnifiVLANNoteConfig:
+class SyncConfig:
     username: str
     password: str
     host: str
@@ -121,25 +121,25 @@ class UnifiVLANNoteConfig:
         else:
             # every optional key has a working default, so a misspelled or
             # renamed one would otherwise be ignored in silence
-            known = set(required) | set(UnifiVLANNoteConfig.OPTIONAL_KEYS)
+            known = set(required) | set(SyncConfig.OPTIONAL_KEYS)
             unknown = [key for key in c if key not in known]
             if unknown:
                 LOGGER.warning(
                     f"Config {config_path} has keys this version does not use, "
                     f"and they are being ignored: {', '.join(sorted(unknown))}"
                 )
-            config = UnifiVLANNoteConfig(c["host"], c["username"], c["password"])
-            for key in UnifiVLANNoteConfig.OPTIONAL_KEYS:
+            config = SyncConfig(c["host"], c["username"], c["password"])
+            for key in SyncConfig.OPTIONAL_KEYS:
                 if key in c:
                     setattr(config, key, c[key])
             return config
 
-class UnifiVLANNoteController:
-    config: UnifiVLANNoteConfig
+class SyncController:
+    config: SyncConfig
     unifi_controller: aiounifi.Controller
     session: ClientSession
 
-    def __init__(self, config: UnifiVLANNoteConfig):
+    def __init__(self, config: SyncConfig):
         self.config = config
         self.session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True))
         self.unifi_controller = aiounifi.Controller(
@@ -362,12 +362,12 @@ class UnifiVLANNoteController:
         finally:
             unsubscribe()
 
-async def main(config: UnifiVLANNoteConfig, output_path: str, watch: bool = False,
+async def main(config: SyncConfig, output_path: str, watch: bool = False,
                on_change: str = None, resync_interval: int = DEFAULT_RESYNC_INTERVAL):
     """Main function."""
     LOGGER.info("Starting aioUniFi")
 
-    controller = UnifiVLANNoteController(config)
+    controller = SyncController(config)
     try:
         if not await controller.doLogin():
             return 1
@@ -400,7 +400,7 @@ if __name__ == "__main__":
 
     config_path = args.config
 
-    config = UnifiVLANNoteConfig.loadFromFile(config_path)
+    config = SyncConfig.loadFromFile(config_path)
 
     if config:
         output_path = args.output

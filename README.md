@@ -108,7 +108,7 @@ working FreeRADIUS and want its VLAN assignments driven from the UniFi UI.
 ```sh
 pip install -r requirements.txt
 cp config.example.json config.json   # then fill in host and credentials
-python unifi_vlan_note.py -c config.json -o ./out
+python unifi_freeradius_sync.py -c config.json -o ./out
 ```
 
 One-shot by default. `--watch` stays running and regenerates on change;
@@ -117,8 +117,8 @@ you signal FreeRADIUS to reload.
 
 | Flag | Meaning |
 | --- | --- |
-| `-c`, `--config` | config file path |
-| `-o`, `--output` | output directory (`mods-config/files/authorize` is created beneath it) |
+| `-c`, `--config` | config file path (default `./config.json`) |
+| `-o`, `--output` | output directory, default `./` (`mods-config/files/authorize` is created beneath it) |
 | `-w`, `--watch` | stay running, regenerate on UniFi change events |
 | `--on-change` | shell command to run after each regeneration |
 | `--resync` | seconds between fallback full regenerations (default 3600) |
@@ -160,7 +160,6 @@ integration point if your deployment differs.
 - Fail-open default, as described above.
 - `aiounifi` is Home Assistant's internal UniFi library and makes breaking
   changes without notice. The version is pinned hard for this reason.
-- Naming is inconsistent (`unifi_vlan_note.py` predates the project name).
 
 ## Development
 

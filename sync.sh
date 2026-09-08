@@ -62,7 +62,7 @@ deploy() {
 
 sync_once() {
     rm -rf "$STAGING_DIR"
-    if ! python /usr/src/app/unifi_vlan_note.py -c "$CONFIG_PATH" -o "$STAGING_DIR"; then
+    if ! python /usr/src/app/unifi_freeradius_sync.py -c "$CONFIG_PATH" -o "$STAGING_DIR"; then
         log "ERROR: scraper failed; keeping current config"
         return 1
     fi
@@ -89,7 +89,7 @@ esac
 # dies, restart it after a delay
 while true; do
     rm -rf "$STAGING_DIR"
-    python /usr/src/app/unifi_vlan_note.py --watch \
+    python /usr/src/app/unifi_freeradius_sync.py --watch \
         -c "$CONFIG_PATH" -o "$STAGING_DIR" \
         --resync "$RESYNC_INTERVAL" \
         --on-change "/usr/src/app/sync.sh --deploy"

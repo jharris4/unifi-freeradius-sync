@@ -1,6 +1,6 @@
 import pytest
 
-from unifi_vlan_note import toMACUppercase
+from unifi_freeradius_sync import toMACUppercase
 
 
 @pytest.mark.parametrize(

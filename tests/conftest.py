@@ -5,7 +5,7 @@ already deployed and its output feeds the FreeRADIUS `files` module in an
 auth path, so a diff here means a behaviour change -- update an expectation
 only when the change is the point.
 
-`UnifiVLANNoteController.__init__` opens an aiohttp session and builds an
+`SyncController.__init__` opens an aiohttp session and builds an
 aiounifi controller, so these helpers bypass it entirely and stub the two
 methods that reach the network. Everything downstream of `getNetworks` and
 `getClients` -- including `getVLANs` -- runs for real.
@@ -13,12 +13,12 @@ methods that reach the network. Everything downstream of `getNetworks` and
 
 import pytest
 
-from unifi_vlan_note import UnifiVLANNoteConfig, UnifiVLANNoteController
+from unifi_freeradius_sync import SyncConfig, SyncController
 
 
 def make_config(**overrides):
     """A config with the documented defaults, minus anything overridden."""
-    config = UnifiVLANNoteConfig(
+    config = SyncConfig(
         host="unifi.example.test",
         username="user",
         password="password",
@@ -30,7 +30,7 @@ def make_config(**overrides):
 
 
 def make_controller(clients=(), networks=(), **config_overrides):
-    controller = object.__new__(UnifiVLANNoteController)
+    controller = object.__new__(SyncController)
     controller.config = make_config(**config_overrides)
 
     async def get_networks():

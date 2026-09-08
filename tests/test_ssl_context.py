@@ -5,7 +5,7 @@ import ssl
 import pytest
 from conftest import make_config
 
-from unifi_vlan_note import buildSSLContext
+from unifi_freeradius_sync import buildSSLContext
 
 
 def test_verification_is_off_by_default():
