@@ -79,6 +79,18 @@ async def test_first_match_in_the_note_wins():
     assert record.vlan == 20
 
 
+@pytest.mark.parametrize("note", ["vlan=41,alt_vlan=31", "vlan=41, alt_vlan=31"])
+async def test_both_directives_in_one_comma_separated_note(note):
+    # the shape a real note takes. The comma gives \b its boundary before
+    # alt_vlan, and re.search taking the leftmost match is what stops the
+    # primary pattern from picking up the "vlan=31" inside "alt_vlan=31"
+    [record] = await records(
+        [client("aa:bb:cc:dd:ee:01", note=note)],
+        [vlan_network(41), vlan_network(31)],
+    )
+    assert (record.vlan, record.alt_vlan, record.blocked) == (41, 31, False)
+
+
 async def test_alt_vlan_does_not_satisfy_the_primary_regex():
     # the word boundary keeps "alt_vlan=30" from matching as "vlan=30", so a
     # note carrying only an alt VLAN leaves the primary unset and gets
