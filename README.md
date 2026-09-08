@@ -20,10 +20,10 @@ The generated file begins with a catch-all:
 
 ```
 DEFAULT Auth-Type := Accept
-    Tunnel-Type = VLAN,
-    Tunnel-Medium-Type = IEEE-802,
-    Tunnel-Private-Group-Id = "<default_vlan>",
-    Fall-Through = Yes
+   Tunnel-Type = VLAN,
+   Tunnel-Medium-Type = IEEE-802,
+   Tunnel-Private-Group-Id = "<default_vlan>",
+   Fall-Through = Yes
 ```
 
 **Any MAC address that is not listed is accepted and placed on
@@ -101,14 +101,28 @@ integration point if your deployment differs.
 
 ## Known issues
 
-- No tests yet.
 - Fail-open default, as described above.
 - `client_secret` is a required config key that is never read — vestigial from
-  an earlier version that also generated `clients.conf`. It will be removed.
+  an earlier version that also generated `clients.conf`. It might be removed
+  once this repo matures.
 - TLS verification is not configurable.
 - `aiounifi` is Home Assistant's internal UniFi library and makes breaking
   changes without notice. The version is pinned hard for this reason.
 - Naming is inconsistent (`unifi_vlan_note.py` predates the project name).
+
+## Development
+
+```sh
+python3.13 -m venv .venv          # matches the Dockerfile base image
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest
+.venv/bin/ruff check .
+```
+
+The suite under `tests/` is characterization, not specification: it pins the
+bytes the currently deployed version produces, so a refactor can be checked
+against known-good output. A failure means the generated `authorize` file
+changed — confirm that was intended before updating an expectation.
 
 ## License
 
