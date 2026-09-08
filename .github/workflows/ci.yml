@@ -33,8 +33,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: docker/setup-qemu-action@v4
+
       - uses: docker/setup-buildx-action@v4
 
+      # loaded into the daemon so the smoke test below can run it, which only
+      # works for a single platform -- this is the runner's own architecture
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -44,3 +48,14 @@ jobs:
 
       - name: Import the module inside the image
         run: docker run --rm unifi-freeradius-sync:ci python -c "import unifi_freeradius_sync"
+
+      # release.yml publishes linux/arm64 for the Raspberry Pi host, so build
+      # it here too. Neither loaded nor pushed: this only has to prove that a
+      # multi-architecture build succeeds before a tag depends on it.
+      - name: Build every published platform
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: unifi-freeradius-sync:ci-multiarch

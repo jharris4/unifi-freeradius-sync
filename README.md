@@ -179,6 +179,10 @@ Pushing a `vX.Y.Z` tag runs the tests again and then publishes
 published — there is no `:latest`, deliberately, so a compose file cannot end
 up tracking whatever was built most recently.
 
+Each release is a multi-architecture manifest covering `linux/amd64` and
+`linux/arm64`, so the same tag runs on an x86 server and on a Raspberry Pi.
+CI builds both platforms on every pull request; only the release job pushes.
+
 The suite under `tests/` is characterization, not specification: it pins the
 bytes the currently deployed version produces, so a refactor can be checked
 against known-good output. A failure means the generated `authorize` file
