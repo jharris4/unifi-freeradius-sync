@@ -22,7 +22,6 @@ def make_config(**overrides):
         host="unifi.example.test",
         username="user",
         password="password",
-        client_secret="unused",
     )
     for key, value in overrides.items():
         assert hasattr(config, key), f"unknown config key {key!r}"

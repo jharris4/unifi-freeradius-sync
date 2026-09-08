@@ -9,6 +9,5 @@
     "vlan_regex_match_index": 5,
     "vlan_2_regex": "(vlan2)(\\s*)([=:])(\\s*)([0-9]+)",
     "vlan_2_regex_match_index": 5,
-    "vlan_2_ssid": "",
-    "client_secret": "UNUSED_SEE_README"
+    "vlan_2_ssid": ""
 }

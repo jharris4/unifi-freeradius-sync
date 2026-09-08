@@ -56,6 +56,22 @@ additional entry matched on `Called-Station-Id`, so the device gets a
 different VLAN when it connects to that specific SSID. Leave `vlan_2_ssid`
 empty to disable. Only one such SSID is supported.
 
+## What this does not do
+
+It generates one file: `mods-config/files/authorize`. That is the whole output.
+
+In particular it does **not** generate `clients.conf`, so the RADIUS clients
+and their shared secrets stay yours to manage. That is deliberate — the shared
+secret is not UniFi's data, the set of NAS devices changes about as often as
+you buy an access point, and for most deployments `clients.conf` is a single
+hand-written block covering the management subnet. There is nothing there
+worth syncing, and generating it would mean handing this tool a secret to
+write to disk in exchange for nothing.
+
+The rest of the FreeRADIUS configuration — EAP, certificates, `mods-enabled`,
+the server blocks — is likewise out of scope. This tool assumes you have a
+working FreeRADIUS and want its VLAN assignments driven from the UniFi UI.
+
 ## Usage
 
 ```sh
@@ -102,9 +118,6 @@ integration point if your deployment differs.
 ## Known issues
 
 - Fail-open default, as described above.
-- `client_secret` is a required config key that is never read — vestigial from
-  an earlier version that also generated `clients.conf`. It might be removed
-  once this repo matures.
 - TLS verification is not configurable.
 - `aiounifi` is Home Assistant's internal UniFi library and makes breaking
   changes without notice. The version is pinned hard for this reason.

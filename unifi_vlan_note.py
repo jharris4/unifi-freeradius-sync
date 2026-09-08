@@ -72,21 +72,19 @@ class UnifiVLANNoteConfig:
     vlan_2_regex_match_index: int = VLAN_2_REGEX_MATCH_INDEX
     vlan_2_ssid : str = VLAN_2_SSID
     default_vlan: int = 1
-    client_secret: str
 
-    def __init__(self, host: str, username: str, password: str, client_secret: str):
+    def __init__(self, host: str, username: str, password: str):
         self.host = host
         self.username = username
         self.password = password
-        self.client_secret = client_secret
 
     def loadFromFile(config_path: str):
         c = json.loads(Path(config_path).read_text())
-        missing = [key for key in ("host", "username", "password", "client_secret") if key not in c]
+        missing = [key for key in ("host", "username", "password") if key not in c]
         if missing:
             LOGGER.error(f"Config {config_path} is missing required keys: {', '.join(missing)}")
         else:
-            config = UnifiVLANNoteConfig(c["host"], c["username"], c["password"], c["client_secret"])
+            config = UnifiVLANNoteConfig(c["host"], c["username"], c["password"])
             if ("port" in c):
                 config.port = c["port"]
             if ("site" in c):
