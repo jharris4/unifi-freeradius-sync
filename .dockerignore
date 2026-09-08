@@ -1,0 +1,17 @@
+# The image needs requirements.txt, unifi_freeradius_sync.py and sync.sh, and
+# nothing else. Without this the build context includes .venv and .git, which
+# are both far larger than the image itself.
+.venv/
+venv/
+.git/
+.github/
+tests/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# never let credentials into a build context
+config.json
+*.local.json

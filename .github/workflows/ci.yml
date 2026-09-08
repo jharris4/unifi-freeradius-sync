@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # matches the base image in the Dockerfile; aiounifi needs >= 3.13
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - run: ruff check .
+
+      - run: pytest
+
+  image:
+    # the image is only built on a tag, so build it here too -- otherwise a
+    # broken Dockerfile is not discovered until release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: unifi-freeradius-sync:ci
+
+      - name: Import the module inside the image
+        run: docker run --rm unifi-freeradius-sync:ci python -c "import unifi_freeradius_sync"

@@ -1,5 +1,7 @@
 # unifi-freeradius-sync
 
+[![CI](https://github.com/jharris4/unifi-freeradius-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/jharris4/unifi-freeradius-sync/actions/workflows/ci.yml)
+
 Generates a FreeRADIUS `authorize` file from UniFi client notes, so MAC-based
 VLAN assignment is driven by the UniFi controller instead of a hand-maintained
 RADIUS config.
@@ -169,6 +171,13 @@ python3.13 -m venv .venv          # matches the Dockerfile base image
 .venv/bin/python -m pytest
 .venv/bin/ruff check .
 ```
+
+CI runs both of those on every pull request, and also builds the image so a
+broken `Dockerfile` is caught before a release rather than during one.
+Pushing a `vX.Y.Z` tag runs the tests again and then publishes
+`ghcr.io/jharris4/unifi-freeradius-sync:X.Y.Z`. Only the exact version is
+published — there is no `:latest`, deliberately, so a compose file cannot end
+up tracking whatever was built most recently.
 
 The suite under `tests/` is characterization, not specification: it pins the
 bytes the currently deployed version produces, so a refactor can be checked
