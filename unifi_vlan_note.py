@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import ssl
 import sys
 import textwrap
 from pathlib import Path
@@ -40,6 +41,20 @@ ALT_VLAN_REGEX = r"\b(alt_vlan)(\s*)([=:])(\s*)([0-9]+)"
 ALT_VLAN_REGEX_MATCH_INDEX = 5 # whole match is at index 0, so index is 1 based...
 ALT_SSID = ""
 
+def buildSSLContext(config):
+    """aiounifi takes an SSLContext or the literal False -- there is no True.
+
+    Verification is off by default because UniFi controllers ship self-signed
+    certificates. Turning it on only helps if you have put a real certificate
+    on the controller, or signed one with your own CA and pointed `ca_bundle`
+    at it.
+    """
+    if not config.verify_ssl:
+        return False
+    if config.ca_bundle:
+        return ssl.create_default_context(cafile=config.ca_bundle)
+    return ssl.create_default_context()
+
 def toMACUppercase(mac: str):
     return re.sub('[:]', '', mac).upper()
 
@@ -75,6 +90,8 @@ class UnifiVLANNoteConfig:
     alt_ssid: str = ALT_SSID
     default_vlan: int = 1
     reject_unknown: bool = False
+    verify_ssl: bool = False
+    ca_bundle: str = None
 
     def __init__(self, host: str, username: str, password: str):
         self.host = host
@@ -91,6 +108,8 @@ class UnifiVLANNoteConfig:
         "alt_ssid",
         "default_vlan",
         "reject_unknown",
+        "verify_ssl",
+        "ca_bundle",
     )
 
     def loadFromFile(config_path: str):
@@ -131,7 +150,7 @@ class UnifiVLANNoteController:
                 password=config.password,
                 port=config.port,
                 site=config.site,
-                ssl_context=False,
+                ssl_context=buildSSLContext(config),
             )
         )
 

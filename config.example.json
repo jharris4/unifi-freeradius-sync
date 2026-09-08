@@ -2,6 +2,8 @@
     "host": "192.168.1.1",
     "port": 8443,
     "site": "default",
+    "verify_ssl": false,
+    "ca_bundle": null,
     "username": "REPLACE_ME",
     "password": "REPLACE_ME",
     "default_vlan": 1,

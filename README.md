@@ -137,8 +137,12 @@ read that section.
 Keys this version does not recognise are ignored, but logged at startup, so a
 misspelled or renamed optional key does not fail silently.
 
-TLS verification against the controller is currently disabled unconditionally,
-because UniFi controllers ship self-signed certificates.
+TLS verification against the controller is off by default, because UniFi
+controllers ship self-signed certificates. Set `verify_ssl: true` to turn it
+on — which only helps if you have put a real certificate on the controller, or
+signed one with your own CA and pointed `ca_bundle` at that CA's file. A
+`ca_bundle` that is missing or unparseable is an error rather than a quiet
+fallback to the system store.
 
 ## Docker
 
@@ -154,7 +158,6 @@ integration point if your deployment differs.
 ## Known issues
 
 - Fail-open default, as described above.
-- TLS verification is not configurable.
 - `aiounifi` is Home Assistant's internal UniFi library and makes breaking
   changes without notice. The version is pinned hard for this reason.
 - Naming is inconsistent (`unifi_vlan_note.py` predates the project name).
