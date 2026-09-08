@@ -14,12 +14,3 @@ target-version = "py313"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
 
-[tool.ruff.lint.per-file-ignores]
-# unifi_vlan_note.py is untouched by this commit, so its pre-existing findings
-# are exempted rather than mixed into a test-only change. Dropped once the
-# file is cleaned up.
-"unifi_vlan_note.py" = [
-    "I001",   # import block not sorted
-    "E501",   # five lines over the limit
-    "UP041",  # asyncio.TimeoutError is an alias for TimeoutError
-]

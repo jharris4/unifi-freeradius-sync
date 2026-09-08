@@ -1,17 +1,18 @@
-import os
-import sys
-import asyncio
-import logging
-import json
-import re
 import argparse
+import asyncio
+import json
+import logging
+import os
+import re
+import sys
 import textwrap
 from pathlib import Path
+
 import aiohttp
-from aiohttp import ClientSession
 import aiounifi
-from aiounifi.models.configuration import Configuration
+from aiohttp import ClientSession
 from aiounifi.models.api import ApiRequest
+from aiounifi.models.configuration import Configuration
 from aiounifi.models.message import MessageKey
 
 DEFAULT_CONFIG_PATH = "./unifi_vlan_note_config.json"
@@ -51,7 +52,8 @@ class MACVLANRecord:
     wired: bool
     blocked: bool
 
-    def __init__(self, mac: str, vlan: int, vlan_2: int, alias: str, ip: str, wired: bool, blocked: bool):
+    def __init__(self, mac: str, vlan: int, vlan_2: int, alias: str, ip: str,
+                 wired: bool, blocked: bool):
         self.mac = mac
         self.vlan = vlan
         self.vlan_2 = vlan_2
@@ -138,7 +140,7 @@ class UnifiVLANNoteController:
         except aiounifi.Unauthorized:
             LOGGER.warning(f"Connected to UniFi at {self.config.host} but not registered")
 
-        except (asyncio.TimeoutError, aiounifi.RequestError):
+        except (TimeoutError, aiounifi.RequestError):
             LOGGER.exception(f"Error connecting to the UniFi controller at {self.config.host}")
 
         except aiounifi.AiounifiException:
@@ -147,11 +149,15 @@ class UnifiVLANNoteController:
         return False
 
     async def getNetworks(self):
-        networksResponse = await self.unifi_controller.request(ApiRequest(method="GET",path="/rest/networkconf"))
+        networksResponse = await self.unifi_controller.request(
+            ApiRequest(method="GET", path="/rest/networkconf")
+        )
         return networksResponse["data"] if "data" in networksResponse else []
 
     async def getClients(self):
-        clientsResponse = await self.unifi_controller.request(ApiRequest(method="GET",path="/stat/alluser"))
+        clientsResponse = await self.unifi_controller.request(
+            ApiRequest(method="GET", path="/stat/alluser")
+        )
         return clientsResponse["data"] if "data" in clientsResponse else []
 
     async def getVLANs(self):
@@ -228,11 +234,12 @@ class UnifiVLANNoteController:
                         #   Tunnel-Private-Group-ID := "{mac_vlan.vlan}"'''))
                 else:
                     if mac_vlan.vlan_2 and len(self.config.vlan_2_ssid) > 0:
+                        ssid_match = f"Called-Station-Id =~ '.*:{self.config.vlan_2_ssid}'"
                         f.write(textwrap.dedent(f'''\
                             # {mac_vlan.alias}{" [WIRED]" if mac_vlan.wired else ""}
                             # {mac_vlan.ip}
                             # SSID: {self.config.vlan_2_ssid}
-                            {toMACUppercase(mac_vlan.mac)} Called-Station-Id =~ '.*:{self.config.vlan_2_ssid}'
+                            {toMACUppercase(mac_vlan.mac)} {ssid_match}
                                Tunnel-Private-Group-ID := "{mac_vlan.vlan_2}"'''))
                         f.write("\n\n")
 
