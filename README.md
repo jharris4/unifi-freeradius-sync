@@ -151,8 +151,11 @@ fallback to the system store.
 The included `Dockerfile` and `sync.sh` are one worked example of deploying
 this against a containerised FreeRADIUS: `sync.sh` validates the generated
 file, refuses to deploy empty or MAC-less output, copies it into the live
-mount, and sends `SIGHUP` to a named FreeRADIUS container over the Docker
-socket so the server reloads without restarting.
+mount, and runs `kill -HUP 1` inside a named FreeRADIUS container over the
+Docker socket so the server reloads without restarting. The FreeRADIUS
+container needs a shell and must run the server as PID 1, as the official
+images do. It deliberately avoids Docker's kill endpoint, which marks the
+container as manually stopped so its restart policy no longer applies.
 
 That wrapper is deliberately opinionated. `--on-change` is the general
 integration point if your deployment differs.
