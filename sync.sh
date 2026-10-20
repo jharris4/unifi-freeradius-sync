@@ -13,16 +13,30 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*"
 }
 
+docker_api() {
+    # docker_api METHOD PATH [JSON_BODY]
+    curl -sSf --unix-socket /var/run/docker.sock -X "$1" \
+        -H 'Content-Type: application/json' ${3:+-d "$3"} "http://localhost$2"
+}
+
 reload_freeradius() {
     # SIGHUP makes freeradius re-read the files module (authorize) without
     # stopping the server, which also avoids breaking the keepalived container
-    # that shares its network namespace
-    status=$(curl -s -o /dev/null -w '%{http_code}' --unix-socket /var/run/docker.sock \
-        -X POST "http://localhost/containers/$FREERADIUS_CONTAINER/kill?signal=SIGHUP")
-    if [ "$status" = "204" ]; then
+    # that shares its network namespace.
+    #
+    # The signal comes from a kill run inside the container, not from Docker's
+    # kill endpoint: Docker marks a container as manually stopped whenever that
+    # endpoint signals it, whatever the signal, and from then on it ignores the
+    # restart policy, so a crashed or daemon-restarted freeradius stays down.
+    exec_id=$(docker_api POST "/containers/$FREERADIUS_CONTAINER/exec" \
+        '{"Cmd":["sh","-c","kill -HUP 1"]}' \
+        | sed -n 's/.*"Id":"\([0-9a-f]*\)".*/\1/p')
+    if [ -n "$exec_id" ] \
+        && docker_api POST "/exec/$exec_id/start" '{"Detach":false}' >/dev/null \
+        && docker_api GET "/exec/$exec_id/json" | grep -q '"ExitCode":0[,}]'; then
         log "sent SIGHUP to $FREERADIUS_CONTAINER"
     else
-        log "ERROR: failed to signal $FREERADIUS_CONTAINER (HTTP $status)"
+        log "ERROR: failed to signal $FREERADIUS_CONTAINER"
         return 1
     fi
 }
