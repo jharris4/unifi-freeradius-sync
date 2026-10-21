@@ -7,6 +7,9 @@ testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 
+# Lint only: `ruff format` is deliberately not used. It collapses the
+# expected-output strings in tests/test_authorize_file.py onto single lines,
+# and one line per generated line is what makes them readable as the file.
 [tool.ruff]
 line-length = 100
 target-version = "py313"
