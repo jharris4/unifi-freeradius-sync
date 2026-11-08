@@ -6,6 +6,7 @@
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 # Lint only: `ruff format` is deliberately not used. It collapses the
 # expected-output strings in tests/test_authorize_file.py onto single lines,
