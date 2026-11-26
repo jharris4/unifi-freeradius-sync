@@ -2,7 +2,7 @@
 # snapshot rather than whatever the floating tag resolved to at the time.
 # Note that apt-get and pip still resolve at build time, so two builds of
 # the same commit are not byte-identical.
-FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
+FROM python:3.13-slim@sha256:7249d5587b78209a006dc4a3b5340678f84ea729239193aa559962cd8c1fce50
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
